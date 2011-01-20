@@ -1,9 +1,9 @@
 package aerys.qark
 {
-	import flash.net.FileReference;
 	import flash.utils.ByteArray;
-	import flash.utils.Dictionary;
 	import flash.utils.describeType;
+	import flash.utils.getDefinitionByName;
+	import flash.utils.getQualifiedClassName;
 
 	public class Qark
 	{
@@ -15,6 +15,7 @@ package aerys.qark
 		private static const FLAG_UTF_STRING	: int		= 5;
 		private static const FLAG_BYTES			: int		= 6;
 		private static const FLAG_BOOLEAN		: int		= 7;
+		private static const FLAG_CUSTOM		: int		= 8;
 		
 		private static const ENCODERS		: Array		= [encodeObject,
 														   encodeArray,
@@ -23,7 +24,8 @@ package aerys.qark
 														   encodeString,
 														   encodeUTFString,
 														   encodeBytes,
-														   encodeBoolean];
+														   encodeBoolean,
+														   encodeCustomObject];
 		
 		private static const DECODERS		: Array		= [decodeObject,
 														   decodeArray,
@@ -32,7 +34,8 @@ package aerys.qark
 														   decodeString,
 														   decodeUTFString,
 														   decodeBytes,
-														   decodeBoolean];
+														   decodeBoolean,
+														   decodeCustomObject];
 		
 		private static function getTypeFlag(source : *) : int
 		{
@@ -48,8 +51,10 @@ package aerys.qark
 				return FLAG_BYTES;
 			if (source is Boolean)
 				return FLAG_BOOLEAN;
+			if (getQualifiedClassName(source) == "Object")
+				return FLAG_OBJECT;
 			
-			return FLAG_OBJECT;
+			return FLAG_CUSTOM;
 		}
 		
 		public static function encode(source : *) : ByteArray
@@ -99,21 +104,6 @@ package aerys.qark
 				++length;
 			}
 			
-			if (length == 0)
-			{
-				var variables : XMLList = describeType(source).variable;
-				
-				for each (var variable : XML in variables)
-				{
-					propertyName = variable.@name;
-					
-					encodeString(propertyName, target);
-					encodeRecursive(source[propertyName], target);
-					
-					++length;
-				}
-			}
-			
 			var stop : int = target.position;
 			
 			target.position = start;
@@ -121,15 +111,16 @@ package aerys.qark
 			target.position = stop;
 		}
 	
-		private static function decodeObject(source : ByteArray) : Object
+		private static function decodeObject(source : ByteArray, target : Object = null) : Object
 		{
-			var object 	: Object 	= new Object();
 			var length	: int		= source.readShort();
 			
-			for (; length > 0; --length)
-				object[decodeString(source)] = decodeRecursive(source);
+			target ||= new Object();
 			
-			return object;
+			for (; length > 0; --length)
+				target[decodeString(source)] = decodeRecursive(source);
+			
+			return target;
 		}
 		
 		private static function encodeArray(source : Array, target : ByteArray) : void
@@ -226,6 +217,33 @@ package aerys.qark
 		private static function decodeBoolean(source :ByteArray) : Boolean
 		{
 			return source.readByte() == 1;
+		}
+		
+		private static function encodeCustomObject(source : Object, target : ByteArray) : void
+		{
+			var variables : XMLList = describeType(source).variable;
+			var object	: Object = new Object();
+			
+			encodeString(getQualifiedClassName(source), target);
+			
+			for each (var variable : XML in variables)
+			{
+				var propertyName : String = variable.@name;
+				
+				object[propertyName] = source[propertyName];
+			}
+			
+			encodeObject(object, target);
+		}
+		
+		private static function decodeCustomObject(source : ByteArray) : Object
+		{
+			var className : String = decodeString(source);
+			var instance : Object = new (getDefinitionByName(className))();
+			
+			decodeObject(source, instance);
+			
+			return instance;
 		}
 	}
 }
