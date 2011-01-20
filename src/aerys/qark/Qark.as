@@ -9,16 +9,16 @@ package aerys.qark
 
 	public class Qark
 	{
-		private static const FLAG_CUSTOM		: int		= 0;
-		private static const FLAG_OBJECT		: int		= 1;
-		private static const FLAG_ARRAY			: int		= 2;
-		private static const FLAG_INTEGER		: int		= 3;
-		private static const FLAG_FLOAT			: int		= 4;
-		private static const FLAG_STRING		: int		= 5;
-		private static const FLAG_UTF_STRING	: int		= 6;
-		private static const FLAG_BYTES			: int		= 7;
-		private static const FLAG_BOOLEAN		: int		= 8;
-		private static const FLAG_BITMAP_DATA	: int		= 9;
+		private static const FLAG_CUSTOM		: int	= 0;
+		private static const FLAG_OBJECT		: int	= 1;
+		private static const FLAG_ARRAY			: int	= 2;
+		private static const FLAG_INTEGER		: int	= 3;
+		private static const FLAG_FLOAT			: int	= 4;
+		private static const FLAG_STRING		: int	= 5;
+		private static const FLAG_UTF_STRING	: int	= 6;
+		private static const FLAG_BYTES			: int	= 7;
+		private static const FLAG_BOOLEAN		: int	= 8;
+		private static const FLAG_BITMAP_DATA	: int	= 9;
 		
 		
 		private static const ENCODERS		: Array		= [encodeCustomObject,
@@ -229,39 +229,22 @@ package aerys.qark
 		
 		private static function encodeCustomObject(source : Object, target : ByteArray) : void
 		{
-			if (source is IExternalizable)
+			var variables	: XMLList = describeType(source).variable;
+			var object		: Object = new Object();
+			
+			for each (var variable : XML in variables)
 			{
-				(source as IExternalizable).writeExternal(target);
+				var propertyName : String = variable.@name;
+				
+				object[propertyName] = source[propertyName];
 			}
-			else
-			{
-				var variables : XMLList = describeType(source).variable;
-				var object	: Object = new Object();
-				
-				encodeString(getQualifiedClassName(source), target);
-				
-				for each (var variable : XML in variables)
-				{
-					var propertyName : String = variable.@name;
-					
-					object[propertyName] = source[propertyName];
-				}
-				
-				encodeObject(object, target);
-			}
+			
+			encodeObject(object, target);
 		}
 		
 		private static function decodeCustomObject(source : ByteArray) : Object
 		{
-			var className : String = decodeString(source);
-			var instance : Object = new (getDefinitionByName(className))();
-			
-			if (instance is IExternalizable)
-				(instance as IExternalizable).readExternal(source);
-			else
-				decodeObject(source, instance);
-			
-			return instance;
+			return decodeObject(source);
 		}
 		
 		private static function encodeBitmapData(source : BitmapData, target : ByteArray) : void
