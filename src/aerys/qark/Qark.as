@@ -51,20 +51,26 @@ package aerys.qark
 			return FLAG_OBJECT;
 		}
 		
-		public static function encode(source : *) : ByteArray
+		public static function encode(...sources) : ByteArray
 		{
 			var data 	: ByteArray = new ByteArray();
 			
-			encodeRecursive(source, data);
+			for each (var source : * in sources)
+				encodeRecursive(source, data);
 			
 			data.position = 0;
 			
 			return data;
 		}
 		
-		public static function decode(source : ByteArray) : *
+		public static function decode(source : ByteArray) : Array
 		{
-			return decodeRecursive(source);
+			var result : Array = new Array();
+			
+			while (source.bytesAvailable)
+				result.push(decodeRecursive(source));
+			
+			return result;
 		}
 		
 		public static function encodeRecursive(source : *, target : ByteArray) : void
