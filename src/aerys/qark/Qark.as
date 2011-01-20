@@ -3,6 +3,7 @@ package aerys.qark
 	import flash.net.FileReference;
 	import flash.utils.ByteArray;
 	import flash.utils.Dictionary;
+	import flash.utils.describeType;
 
 	public class Qark
 	{
@@ -86,15 +87,31 @@ package aerys.qark
 		{
 			var start	: int = target.position;
 			var length 	: int = 0;
+			var propertyName : String = null;
 			
 			target.position += 2;
 			
-			for (var propertyName : String in source)
+			for (propertyName in source)
 			{
 				encodeString(propertyName, target);
 				encodeRecursive(source[propertyName], target);
 				
 				++length;
+			}
+			
+			if (length == 0)
+			{
+				var variables : XMLList = describeType(source).variable;
+				
+				for each (var variable : XML in variables)
+				{
+					propertyName = variable.@name;
+					
+					encodeString(propertyName, target);
+					encodeRecursive(source[propertyName], target);
+					
+					++length;
+				}
 			}
 			
 			var stop : int = target.position;
