@@ -63,14 +63,14 @@ package aerys.qark
 			return data;
 		}
 		
-		public static function decode(source : ByteArray) : Array
+		public static function decode(source : ByteArray) : *
 		{
 			var result : Array = new Array();
 			
 			while (source.bytesAvailable)
 				result.push(decodeRecursive(source));
 			
-			return result;
+			return result.length == 1 ? result[0] : result;
 		}
 		
 		public static function encodeRecursive(source : *, target : ByteArray) : void
