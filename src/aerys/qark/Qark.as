@@ -145,8 +145,6 @@ package aerys.qark
 				result.writeByte(FLAG_NONE);
 			}
 			
-			trace(size, compressedSize, deflatedSize);
-		
 			result.writeBytes(data);
 			result.position = 0;
 			
