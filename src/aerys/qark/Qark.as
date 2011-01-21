@@ -20,10 +20,9 @@ package aerys.qark
 		private static const TYPE_UINT			: uint	= 4;
 		private static const TYPE_FLOAT			: uint	= 5;
 		private static const TYPE_STRING		: uint	= 6;
-		private static const TYPE_UTF_STRING	: uint	= 7;
-		private static const TYPE_BYTES			: uint	= 8;
-		private static const TYPE_BOOLEAN		: uint	= 9;
-		private static const TYPE_BITMAP_DATA	: uint	= 10;
+		private static const TYPE_BYTES			: uint	= 7;
+		private static const TYPE_BOOLEAN		: uint	= 8;
+		private static const TYPE_BITMAP_DATA	: uint	= 9;
 		
 		
 		private static const ENCODERS		: Array		= [encodeCustomObject,
@@ -33,7 +32,6 @@ package aerys.qark
 														   encodeUnsignedInteger,
 														   encodeFloat,
 														   encodeString,
-														   encodeUTFString,
 														   encodeBytes,
 														   encodeBoolean,
 														   encodeBitmapData];
@@ -45,7 +43,6 @@ package aerys.qark
 														   decodeUnsignedInteger,
 														   decodeFloat,
 														   decodeString,
-														   decodeUTFString,
 														   decodeBytes,
 														   decodeBoolean,
 														   decodeBitmapData];
@@ -59,7 +56,7 @@ package aerys.qark
 			if (source is Number)
 				return TYPE_FLOAT;
 			if (source is String)
-				return TYPE_UTF_STRING;
+				return TYPE_STRING;
 			if (source is Array)
 				return TYPE_ARRAY;
 			if (source is ByteArray)
@@ -191,8 +188,6 @@ package aerys.qark
 		{
 			var flag : uint = source.readByte();
 			
-			trace(flag);
-			
 			return DECODERS[flag].call(null, source);
 		}
 		
@@ -253,30 +248,10 @@ package aerys.qark
 		
 		private static function encodeString(source : String, target : ByteArray) : void
 		{
-			target.writeMultiByte(source, "iso-8859-1");
-			target.writeByte(0);
-		}
-		
-		private static function decodeString(source : ByteArray) : String
-		{
-			var byte : int = source.readByte();
-			var str : String = "";
-			
-			while (byte != 0)
-			{
-				str += String.fromCharCode(byte);
-				byte = source.readByte();
-			}
-			
-			return str;
-		}
-		
-		private static function encodeUTFString(source : String, target : ByteArray) : void
-		{
 			target.writeUTF(source);
 		}
 		
-		private static function decodeUTFString(source : ByteArray) : String
+		private static function decodeString(source : ByteArray) : String
 		{
 			return source.readUTF();
 		}
