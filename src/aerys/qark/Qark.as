@@ -2,29 +2,35 @@ package aerys.qark
 {
 	import flash.display.BitmapData;
 	import flash.utils.ByteArray;
-	import flash.utils.IExternalizable;
 	import flash.utils.describeType;
-	import flash.utils.getDefinitionByName;
 	import flash.utils.getQualifiedClassName;
 
 	public class Qark
 	{
-		private static const FLAG_CUSTOM		: int	= 0;
-		private static const FLAG_OBJECT		: int	= 1;
-		private static const FLAG_ARRAY			: int	= 2;
-		private static const FLAG_INTEGER		: int	= 3;
-		private static const FLAG_FLOAT			: int	= 4;
-		private static const FLAG_STRING		: int	= 5;
-		private static const FLAG_UTF_STRING	: int	= 6;
-		private static const FLAG_BYTES			: int	= 7;
-		private static const FLAG_BOOLEAN		: int	= 8;
-		private static const FLAG_BITMAP_DATA	: int	= 9;
+		private static const MAGIC				: uint	= 0x42;
+		
+		private static const FLAG_NONE			: uint	= 0;
+		private static const FLAG_GZIP			: uint	= 1;
+		private static const FLAG_DEFLATE		: uint	= 2;
+		
+		private static const TYPE_CUSTOM		: uint	= 0;
+		private static const TYPE_OBJECT		: uint	= 1;
+		private static const TYPE_ARRAY			: uint	= 2;
+		private static const TYPE_INT			: uint	= 3;
+		private static const TYPE_UINT			: uint	= 4;
+		private static const TYPE_FLOAT			: uint	= 5;
+		private static const TYPE_STRING		: uint	= 6;
+		private static const TYPE_UTF_STRING	: uint	= 7;
+		private static const TYPE_BYTES			: uint	= 8;
+		private static const TYPE_BOOLEAN		: uint	= 9;
+		private static const TYPE_BITMAP_DATA	: uint	= 10;
 		
 		
 		private static const ENCODERS		: Array		= [encodeCustomObject,
 														   encodeObject,
 														   encodeArray,
 														   encodeInteger,
+														   encodeUnsignedInteger,
 														   encodeFloat,
 														   encodeString,
 														   encodeUTFString,
@@ -36,6 +42,7 @@ package aerys.qark
 														   decodeObject,
 														   decodeArray,
 														   decodeInteger,
+														   decodeUnsignedInteger,
 														   decodeFloat,
 														   decodeString,
 														   decodeUTFString,
@@ -43,55 +50,150 @@ package aerys.qark
 														   decodeBoolean,
 														   decodeBitmapData];
 		
-		private static function getTypeFlag(source : *) : int
+		private static function getType(source : *) : int
 		{
 			if (source is int)
-				return FLAG_INTEGER;
+				return TYPE_INT;
+			if (source is uint)
+				return TYPE_UINT;
 			if (source is Number)
-				return FLAG_FLOAT;
+				return TYPE_FLOAT;
 			if (source is String)
-				return FLAG_UTF_STRING;
+				return TYPE_UTF_STRING;
 			if (source is Array)
-				return FLAG_ARRAY;
+				return TYPE_ARRAY;
 			if (source is ByteArray)
-				return FLAG_BYTES;
+				return TYPE_BYTES;
 			if (source is Boolean)
-				return FLAG_BOOLEAN;
+				return TYPE_BOOLEAN;
 			if (source is BitmapData)
-				return FLAG_BITMAP_DATA;
+				return TYPE_BITMAP_DATA;
 			if (getQualifiedClassName(source) == "Object")
-				return FLAG_OBJECT;
+				return TYPE_OBJECT;
 			
-			return FLAG_CUSTOM;
+			return TYPE_CUSTOM;
 		}
 		
+		/**
+		 * Encode an object. This object can be any "simple" type such as:
+		 * <ul>
+		 * <li>int</li>
+		 * <li>uint</li>
+		 * <li>Number</li>
+		 * <li>String</li>
+		 * <li>Boolean</li>
+		 * <li>Array</li>
+		 * <li>Object</li>
+		 * <li>ByteArray</li>
+		 * <li>BitmapData</li>
+		 * </ul>
+		 * <p>Custom classes are also supported. However, only "value objects"
+		 * with valid getter/setter public members will be properly encoded.</p>
+		 * 
+		 * <p>Encoding is done as follow:</p>
+		 * <ul>
+		 * <li>if the object as a "simple" type
+		 * it will be encoded directly</li>
+		 * <li>else, introspection will be used to
+		 * list the public properties of the custom class to determine what
+		 * can be encoded. All those properties will be encoded as a single
+		 * Object value and will be decoded as such.</li>
+		 * </ul>
+		 * 
+		 * <p>The bytes are then compressed using the GZIP or DEFLATE
+		 * (http://www.ietf.org/rfc/rfc1951.txt) algorithm:
+		 * the algorithm giving the lightest output is selected.</p>
+		 * 
+		 * @param source The object to encode.
+		 * @return The resulting bytes in a ByteArray.
+		 * 
+		 */
 		public static function encode(source : *) : ByteArray
 		{
+			var result	: ByteArray	= new ByteArray();
 			var data 	: ByteArray = new ByteArray();
 			
-			encodeRecursive(source, data);
+			result.writeByte(MAGIC);
 			
+			encodeRecursive(source, data);
 			data.position = 0;
 			
-			return data;
+			var size 			: int 	= data.length;
+			var compressedSize	: int	= 0;
+			var deflatedSize	: int	= 0;
+			
+			data.deflate();
+			deflatedSize = data.length;
+			data.inflate();
+			
+			data.compress();
+			compressedSize = data.length;
+			
+			if (compressedSize < size && compressedSize < deflatedSize)
+			{
+				result.writeByte(FLAG_GZIP);
+			}
+			else if (deflatedSize < size && deflatedSize < compressedSize)
+			{
+				data.uncompress();
+				data.deflate();
+				result.writeByte(FLAG_DEFLATE);
+			}
+			else
+			{
+				data.uncompress();
+				result.writeByte(FLAG_NONE);
+			}
+			
+			trace(size, compressedSize, deflatedSize);
+		
+			result.writeBytes(data);
+			result.position = 0;
+			
+			return result;
 		}
 		
+		/**
+		 * Decode bytes resulting from the Qark.encode method and return the
+		 * corresponding object.
+		 * 
+		 * @param source The bytes to decode.
+		 * @return The decoded object.
+		 * 
+		 */
 		public static function decode(source : ByteArray) : *
 		{
-			return decodeRecursive(source);
+			var magic : uint	= source.readByte();
+			
+			if (magic != MAGIC)
+				return null;
+			
+			var flags 	: uint		= source.readByte();
+			var data	: ByteArray	= new ByteArray();
+			
+			source.readBytes(data);
+			
+			if (flags & FLAG_DEFLATE)
+				data.inflate();
+			else if (flags & FLAG_GZIP)
+				data.uncompress();
+	
+			return decodeRecursive(data);
 		}
 		
 		public static function encodeRecursive(source : *, target : ByteArray) : void
 		{
-			var flag : int = getTypeFlag(source);
+			var flag : int = getType(source);
 			
 			target.writeByte(flag);
 			ENCODERS[flag].call(null, source, target);
 		}
-		
+	
 		public static function decodeRecursive(source : ByteArray) : *
 		{
-			var flag : int = source.readByte();
+			var flag : uint = source.readByte();
+			
+			trace(flag);
 			
 			return DECODERS[flag].call(null, source);
 		}
@@ -191,6 +293,16 @@ package aerys.qark
 			return source.readInt();
 		}
 		
+		private static function encodeUnsignedInteger(source : uint, target : ByteArray) : void
+		{
+			target.writeUnsignedInt(source);
+		}
+		
+		private static function decodeUnsignedInteger(source : ByteArray) : uint
+		{
+			return source.readUnsignedInt();
+		}
+
 		private static function encodeFloat(source : Number, target : ByteArray) : void
 		{
 			target.writeFloat(source);
