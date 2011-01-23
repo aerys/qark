@@ -291,6 +291,20 @@ class Qark
     return array($img, $source);
   }
 
+  public static function encodeBytes($source, $target)
+  {
+    $target = self::writeInteger(strlen($source));
+
+    return self::writeBytes($source, $target);
+  }
+
+  public static function decodeBytes($source)
+  {
+    list($length, $source) = self::readInteger($source);
+
+    return self::readBytes($source, $length);
+  }
+
   public static function readByte($source)
   {
     $byte = unpack('C', $source);
