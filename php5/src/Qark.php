@@ -41,12 +41,12 @@ class Qark
                                         'decodeBoolean',
                                         'decodeBitmapData');
 
-  private static function isUnsignedInt($val)
+  private static function isUnsignedInt($value)
   {
     return ctype_digit((string) $value);
   }
 
-  private static function isAssociativeArray($value)
+  private static function isAssociativeArray($array)
   {
     return is_array($array)
            && (count($array) == 0
@@ -81,30 +81,30 @@ class Qark
 
   public static function encode($source)
   {
-    $header = self::writeShort(self::MAGIC);
+    $header = self::writeByte('', self::MAGIC);
 
     $data = self::encodeRecursive($source, '');
     $size = strlen($data);
 
-    $compressedData = gzipcompress($data);
+    $compressedData = gzcompress($data);
     $compressedSize = strlen($compressedData);
 
-    $deflatedData = gzipdeflate($data);
+    $deflatedData = gzdeflate($data);
     $deflatedSize = strlen($deflatedData);
 
     if ($compressedSize < $size && $compressedSize < $deflatedSize)
     {
-      $header = self::writeByte(self::FLAG_GZIP);
+      $header = self::writeByte($header, self::FLAG_GZIP);
       $data = $compressedData;
     }
     else if ($deflatedSize < $size && $deflatedSize < $compressedSize)
     {
-      $header = self::writeByte(self::FLAG_DEFLATE);
+      $header = self::writeByte($header, self::FLAG_DEFLATE);
       $data = $deflatedData;
     }
     else
     {
-      $header = self::writeByte(self::FLAG_NONE);
+      $header = self::writeByte($header, self::FLAG_NONE);
     }
 
     return $header . $data;
@@ -305,6 +305,18 @@ class Qark
     return self::readBytes($source, $length);
   }
 
+  public static function encodeBoolean($source, $target)
+  {
+    return self::writeByte($target, $source ? 1 : 0);
+  }
+
+  public static function decodeBoolean($source)
+  {
+    list($value, $source) = self::readByte($source);
+
+    return array($value != 0, $source);
+  }
+
   public static function readByte($source)
   {
     $byte = unpack('C', $source);
@@ -407,7 +419,7 @@ class Qark
     $string = utf8_encode($string);
     $length = strlen($string);
 
-    $source = self::writeShort($length);
+    $source = self::writeShort($source, $length);
 
     for ($i = 0; $i < $length; $i++)
       $source = self::writeByte($source, ord($string[$i]));
