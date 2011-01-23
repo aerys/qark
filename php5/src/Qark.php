@@ -5,8 +5,8 @@ class Qark
   const MAGIC                   = 0x42;
 
   const FLAG_NONE               = 0;
-  const FLAG_GZIP               = 0;
-  const FLAG_DEFLATE            = 0;
+  const FLAG_GZIP               = 1;
+  const FLAG_DEFLATE            = 2;
 
   const TYPE_CUSTOM             = 0;
   const TYPE_OBJECT             = 1;
