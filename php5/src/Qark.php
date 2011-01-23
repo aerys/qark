@@ -66,6 +66,16 @@ class Qark
     if (self::isAssociativeArray($value))
       return self::TYPE_OBJECT;
 
+    try
+    {
+      imagesx($source);
+      return self::TYPE_BITMAP_DATA;
+    }
+    catch (Exception $e)
+    {
+      // NOTHING
+    }
+
     return self::TYPE_OBJECT;
   }
 
@@ -246,7 +256,42 @@ class Qark
     return self::decodeObject($source);
   }
 
-    public static function readByte($source)
+  public static function encodeBitmapData($source, $target)
+  {
+    $width = imagesx($source);
+    $height = imagesy($source);
+
+    $target = self::writeShort($width);
+    $target = self::writeShort($height);
+
+    for ($y = 0; $y < $height; $y++)
+      for ($x = 0; $x < $width; $x++)
+        $target = self::writeInteger(imagecolorat($source, $x, $y));
+
+    return $target;
+  }
+
+  public static function decodeBitmapData($source)
+  {
+    list($width, $source) = self::readShort($source);
+    list($height, $source) = self::readShort($source);
+
+    $img = imagecreatetruecolor($width, $height);
+
+    for ($y = 0; $y < $height; $y++)
+    {
+      for ($x = 0; $x < $width; $x++)
+      {
+        list($color, $target) = self::readInteger($target);
+
+        imagesetpixel($img, $x, $y, $color);
+      }
+    }
+
+    return array($img, $source);
+  }
+
+  public static function readByte($source)
   {
     $byte = unpack('C', $source);
 
