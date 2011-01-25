@@ -61,8 +61,10 @@ class Qark
       return self::TYPE_INT;
     if (is_float($value))
       return self::TYPE_FLOAT;
-    if (is_string($value))
+    if (is_string($value) && mb_check_encoding($value, 'UTF-8'))
       return self::TYPE_STRING;
+    if (is_string($value))
+      return self::BYTES;
     if (self::isAssociativeArray($value))
       return self::TYPE_OBJECT;
 
@@ -192,7 +194,7 @@ class Qark
 
     foreach ($source as $propertyName => $value)
     {
-      $target = self::writeUTF($target, $propertyName);
+      $target = self::writeUTF($target, utf8_encode($propertyName));
       $target = self::encodeRecursive($value, $target);
     }
 
@@ -210,7 +212,7 @@ class Qark
       list($propertyName, $source) = self::readUTF($source);
       list($value, $source) = self::decodeRecursive($source);
 
-      $object[$propertyName] = $value;
+      $object[utf8_decode($propertyName)] = $value;
 
       $length--;
     }
@@ -411,12 +413,11 @@ class Qark
     foreach ($bytes as $byte)
       $string .= chr($byte);
 
-    return array(utf8_decode($string), $source);
+    return array($string, $source);
   }
 
   public static function writeUTF($source, $string)
   {
-    $string = utf8_encode($string);
     $length = strlen($string);
 
     $source = self::writeShort($source, $length);
