@@ -2,7 +2,7 @@
 
 class Qark
 {
-  const MAGIC                   = 0x42;
+  const MAGIC                   = 0x3121322b;
 
   const FLAG_NONE               = 0;
   const FLAG_GZIP               = 1;
@@ -68,14 +68,17 @@ class Qark
     if (self::isAssociativeArray($value))
       return self::TYPE_OBJECT;
 
-    try
+    if (function_exists('imagecreatetruecolor'))
     {
-      imagesx($source);
-      return self::TYPE_BITMAP_DATA;
-    }
-    catch (Exception $e)
-    {
-      // NOTHING
+      try
+      {
+        imagesx($source);
+        return self::TYPE_BITMAP_DATA;
+      }
+      catch (Exception $e)
+      {
+        // NOTHING
+      }
     }
 
     return self::TYPE_OBJECT;
@@ -83,7 +86,7 @@ class Qark
 
   public static function encode($source)
   {
-    $header = self::writeByte('', self::MAGIC);
+    $header = self::writeInteger('', self::MAGIC);
 
     $data = self::encodeRecursive($source, '');
     $size = strlen($data);
@@ -114,7 +117,7 @@ class Qark
 
   public static function decode($source)
   {
-    list($magic, $source) = self::readByte($source);
+    list($magic, $source) = self::readInteger($source);
 
     if ($magic !== self::MAGIC)
       return null;
@@ -275,6 +278,10 @@ class Qark
 
   public static function decodeBitmapData($source)
   {
+    if (!function_exists('imagecreatetruecolor'))
+      throw new Exception('Unable to decode bitmap data: the GD extension is '
+                          . 'missing');
+
     list($width, $source) = self::readShort($source);
     list($height, $source) = self::readShort($source);
 
