@@ -109,6 +109,9 @@ package aerys.qark
 		{
 			var result	: ByteArray	= new ByteArray();
 			var data 	: ByteArray = new ByteArray();
+			
+			result.endian = Endian.LITTLE_ENDIAN;
+			data.endian = Endian.LITTLE_ENDIAN;
 
 			result.writeInt(MAGIC);
 
@@ -158,6 +161,8 @@ package aerys.qark
 		 */
 		public static function decode(source : ByteArray) : *
 		{
+			source.endian = Endian.LITTLE_ENDIAN;
+		
 			var magic : uint	= source.readInt();
 
 			if (magic != MAGIC)
