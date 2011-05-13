@@ -2,6 +2,7 @@ package aerys.qark
 {
 	import flash.display.BitmapData;
 	import flash.utils.ByteArray;
+	import flash.utils.Endian;
 	import flash.utils.describeType;
 	import flash.utils.getQualifiedClassName;
 
