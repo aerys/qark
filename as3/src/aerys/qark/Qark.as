@@ -172,6 +172,7 @@ package aerys.qark
 			var flags 	: uint		= source.readByte();
 			var data	: ByteArray	= new ByteArray();
 
+			data.endian = Endian.LITTLE_ENDIAN;
 			source.readBytes(data);
 
 			if (flags & FLAG_DEFLATE)
