@@ -24,8 +24,7 @@ package aerys.qark
 		private static const TYPE_BYTES			: uint	= 7;
 		private static const TYPE_BOOLEAN		: uint	= 8;
 		private static const TYPE_BITMAP_DATA	: uint	= 9;
-
-
+		
 		private static const ENCODERS		: Array		= [encodeCustomObject,
 														   encodeObject,
 														   encodeArray,
@@ -304,7 +303,7 @@ package aerys.qark
 			var ba : ByteArray = new ByteArray();
 			var length : int = source.readInt();
 
-			source.readBytes(source, 0, length);
+			source.readBytes(ba, 0, length);
 
 			return ba;
 		}
@@ -353,8 +352,10 @@ package aerys.qark
 		{
 			var bmp : BitmapData = new BitmapData(source.readShort(),
 												  source.readShort());
+			
+			var bytes : ByteArray = decodeBytes(source);
 
-			bmp.setPixels(bmp.rect, decodeBytes(source));
+			bmp.setPixels(bmp.rect, bytes);
 
 			return bmp;
 		}
