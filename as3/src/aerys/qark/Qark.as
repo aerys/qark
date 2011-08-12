@@ -300,12 +300,13 @@ package aerys.qark
 
 		private static function decodeBytes(source : ByteArray) : ByteArray
 		{
-			var ba : ByteArray = new ByteArray();
-			var length : int = source.readInt();
+			var target 	: ByteArray = new ByteArray();
+			var length 	: int 		= source.readInt();
 
-			source.readBytes(ba, 0, length);
+			if (length)
+				source.readBytes(target, 0, length);
 
-			return ba;
+			return target;
 		}
 
 		private static function encodeBoolean(source : Boolean, target : ByteArray) : void
