@@ -294,6 +294,7 @@ package aerys.qark
 
 		private static function encodeBytes(source : ByteArray, target : ByteArray) : void
 		{
+			target.writeBoolean(source.endian == Endian.LITTLE_ENDIAN);
 			target.writeInt(source.length);
 			target.writeBytes(source);
 		}
@@ -301,7 +302,12 @@ package aerys.qark
 		private static function decodeBytes(source : ByteArray) : ByteArray
 		{
 			var target 	: ByteArray = new ByteArray();
-			var length 	: int 		= source.readInt();
+			
+			target.endian = source.readBoolean()
+							? Endian.LITTLE_ENDIAN
+							: Endian.BIG_ENDIAN;
+			
+			var length 	: int	= source.readInt();
 
 			if (length)
 				source.readBytes(target, 0, length);
